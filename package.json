@@ -1,16 +1,19 @@
 {
   "name": "chat-demo",
-  "version": "0.1.2",
-  "description": "基于 DeepSeek API 的静态聊天示例。",
+  "version": "0.2.0",
+  "description": "支持自定义模型厂商（OpenAI / Anthropic 兼容协议）的静态聊天示例，可用 Docker Compose 部署。",
   "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "rspack serve -c rspack.config.ts",
-    "build": "rm -rf dist && NODE_ENV=production rspack build -c rspack.config.ts",
+    "build": "rspack build -c rspack.config.ts",
     "type": "tsc -p tsconfig.json",
     "lint": "oxlint src rspack.config.ts",
-    "format": "oxfmt --write ."
+    "format": "oxfmt --write .",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "dependencies": {
     "@types/katex": "^0.16.5",

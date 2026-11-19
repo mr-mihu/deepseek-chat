@@ -1,0 +1,13 @@
+# 统一换行符：shell 脚本、Dockerfile 被容器直接执行，检出成 CRLF 会报错
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.zip binary

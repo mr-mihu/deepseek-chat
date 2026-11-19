@@ -7,7 +7,14 @@ import {
   IconStopFill16,
   IconThinkOutline14,
 } from '../base/icons.js'
-import { setSearch, setThinking, useSettings } from '../../services/settings.js'
+import {
+  getActiveProvider,
+  setSearch,
+  setThinking,
+  useActiveProvider,
+  useSettings,
+} from '../../services/settings.js'
+import { supportsFeature } from '../../services/api/providers.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
 import {
@@ -23,7 +30,7 @@ import {
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
-import { ensureApiKey } from '../settings/settingsDialogState.js'
+import { ensureProvider } from '../settings/settingsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
 import { ACCEPT, useUploads } from '../../services/attachments.js'
@@ -53,6 +60,10 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  // 当前厂商的能力决定界面上还能用哪些功能：附件、联网搜索都是 DeepSeek 扩展
+  const provider = useActiveProvider()
+  const attachmentsSupported = supportsFeature(provider, 'attachments')
+  const searchSupported = supportsFeature(provider, 'webSearch')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const togglesRef = useRef<HTMLDivElement>(null)
@@ -75,18 +86,30 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   }, [t])
 
   const acceptFiles = (files: File[]) => {
-    if (files.length === 0 || useChatStore.getState().importingHistory || !ensureApiKey()) {
+    if (files.length === 0 || useChatStore.getState().importingHistory || !ensureProvider()) {
       return
     }
-    const error = addDraftFiles(sessionId, files, useSettings.getState().apiKey ?? '')
+    // 附件走 Files API，只有支持该扩展的厂商（DeepSeek 兼容接口）才能发送
+    const provider = getActiveProvider()
+    if (!provider || !supportsFeature(provider, 'attachments')) {
+      showToast({ key: 'attachmentsUnsupported' })
+      return
+    }
+    const error = addDraftFiles(sessionId, files, provider)
     if (error) {
       showToast(error)
     }
   }
   const retryFile = useCallback(
     (id: string) => {
-      if (!useChatStore.getState().importingHistory && ensureApiKey()) {
-        retryDraftAttachment(sessionId, id, useSettings.getState().apiKey ?? '')
+      const provider = getActiveProvider()
+      if (
+        !useChatStore.getState().importingHistory &&
+        ensureProvider() &&
+        provider &&
+        supportsFeature(provider, 'attachments')
+      ) {
+        retryDraftAttachment(sessionId, id, provider)
       }
     },
     [sessionId]
@@ -141,7 +164,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       return
     }
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
-    if (!ensureApiKey() || !sendMessage(sessionId)) {
+    if (!ensureProvider() || !sendMessage(sessionId)) {
       return
     }
     stopReadAloud()
@@ -214,18 +237,20 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('thinkingSwitch')}</span>
             </button>
           </Tooltip>
-          <Tooltip content={t('deactivatedSearchTooltip')}>
-            <button
-              type="button"
-              className={clsx(styles.toggle, search && styles.selected)}
-              aria-label={t('search')}
-              aria-pressed={search}
-              onClick={() => setSearch(!search)}
-            >
-              <IconGlobeLanguageOutline14 />
-              <span className={styles.toggleLabel}>{t('search')}</span>
-            </button>
-          </Tooltip>
+          {searchSupported ? (
+            <Tooltip content={t('deactivatedSearchTooltip')}>
+              <button
+                type="button"
+                className={clsx(styles.toggle, search && styles.selected)}
+                aria-label={t('search')}
+                aria-pressed={search}
+                onClick={() => setSearch(!search)}
+              >
+                <IconGlobeLanguageOutline14 />
+                <span className={styles.toggleLabel}>{t('search')}</span>
+              </button>
+            </Tooltip>
+          ) : null}
         </div>
         <div className={styles.right}>
           <VoiceButton
@@ -235,7 +260,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             onClick={() => {
               if (
                 voice.status !== 'idle' ||
-                (!useChatStore.getState().importingHistory && ensureApiKey())
+                (!useChatStore.getState().importingHistory && ensureProvider())
               ) {
                 void voice.toggle()
               }
@@ -245,9 +270,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             size="m"
             tone="primary"
             icon={<IconPaperclipOutline16 />}
-            tooltip={t('uploadFile')}
-            disabled={importingHistory}
-            onClick={() => ensureApiKey() && fileInputRef.current?.click()}
+            tooltip={attachmentsSupported ? t('uploadFile') : t('attachmentsUnsupported')}
+            disabled={importingHistory || !attachmentsSupported}
+            onClick={() => ensureProvider() && fileInputRef.current?.click()}
           />
           <input
             ref={fileInputRef}

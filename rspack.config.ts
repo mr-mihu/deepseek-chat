@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from '@rspack/cli'
 import { rspack, type Configuration } from '@rspack/core'
 
-const dev = process.env.NODE_ENV !== 'production'
+// `rspack serve` 时按开发模式，`rspack build` 时按生产模式；不依赖 shell 设置 NODE_ENV，Windows 上也能直接构建
+const dev = process.env.NODE_ENV === 'development' || process.argv.includes('serve')
 const targets = ['chrome >= 105', 'edge >= 105', 'safari >= 16', 'firefox >= 110']
 const root = path.dirname(fileURLToPath(import.meta.url))
 const { version } = JSON.parse(

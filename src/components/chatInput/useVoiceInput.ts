@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TranslationMessage } from '../../i18n/index.js'
+import { supportsFeature } from '../../services/api/providers.js'
 import { transcribe } from '../../services/api/speech.js'
 import { startRecording, type Recording } from '../../services/speech/recorder.js'
-import { useSettings } from '../../services/settings.js'
+import { getActiveProvider, useActiveProvider } from '../../services/settings.js'
 import { showToast } from '../base/toastState.js'
 
 export type VoiceInputStatus = 'idle' | 'recording' | 'transcribing'
@@ -30,6 +31,9 @@ const describeRecordingError = (error: unknown): TranslationMessage => {
  * 转写中再次点击取消。录满 120 秒自动结束。
  */
 export const useVoiceInput = (onText: (text: string) => void) => {
+  const provider = useActiveProvider()
+  // 语音接口是 DeepSeek 扩展：当前厂商不支持时直接禁用入口
+  const available = AVAILABLE && supportsFeature(provider, 'voice')
   const [status, setStatus] = useState<VoiceInputStatus>('idle')
   /** 本次录音已录秒数，只在录音中递增 */
   const [seconds, setSeconds] = useState(0)
@@ -75,7 +79,11 @@ export const useVoiceInput = (onText: (text: string) => void) => {
       controller = new AbortController()
       controllerRef.current = controller
       setStatus('transcribing')
-      const text = await transcribe(useSettings.getState().apiKey ?? '', audio, controller.signal)
+      const provider = getActiveProvider()
+      if (!provider) {
+        throw new Error('provider is not configured')
+      }
+      const text = await transcribe(provider, audio, controller.signal)
       if (controller.signal.aborted || operationRef.current !== operation) {
         return
       }
@@ -97,7 +105,7 @@ export const useVoiceInput = (onText: (text: string) => void) => {
   }, [cancel])
 
   const toggle = useCallback(async () => {
-    if (!AVAILABLE) {
+    if (!available) {
       return
     }
     if (status === 'recording') {
@@ -128,7 +136,7 @@ export const useVoiceInput = (onText: (text: string) => void) => {
         showToast(describeRecordingError(error))
       }
     }
-  }, [status, finish, cancel])
+  }, [status, finish, cancel, available])
 
   useEffect(() => {
     if (status !== 'recording') {
@@ -148,5 +156,5 @@ export const useVoiceInput = (onText: (text: string) => void) => {
   /** 当前录音的频谱分析节点，未录音时为 null */
   const getAnalyser = useCallback(() => recordingRef.current?.analyser ?? null, [])
 
-  return { status, seconds, getAnalyser, toggle, cancel, available: AVAILABLE }
+  return { status, seconds, getAnalyser, toggle, cancel, available }
 }

@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
-import { ApiError, streamMessage } from '../api/client.js'
-import type { ChatModel, CreateMessageRequest } from '../api/types.js'
+import { ApiError, streamChat, type Provider } from '../api/client.js'
+import type { CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
+import { supportsFeature } from '../api/providers.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
-import { useSettings } from '../settings.js'
+import { getActiveProvider, useSettings } from '../settings.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -32,11 +33,16 @@ import {
   type UserMessage,
 } from './types.js'
 
-/** deepseek-flash 同时支持深度思考与图片输入 */
-const MODEL: ChatModel = 'deepseek-flash'
-/** 所有生成请求统一携带的助手身份说明 */
+/** DeepSeek 兼容接口使用的助手身份说明 */
 const SYSTEM_PROMPT = '该助手为DeepSeek，由深度求索公司创造。'
-/** 保留最近打开的详情；当前会话、生成中及尚未成功保存的会话不淘汰。 */
+/** 其他模型厂商的通用身份说明 */
+const GENERIC_SYSTEM_PROMPT = '你是一个乐于助人的 AI 助手，请使用与用户相同的语言回答。'
+
+/** 用提问文本截出会话标题（非 DeepSeek 厂商没有服务端自动标题） */
+const deriveTitle = (text: string) => {
+  const line = text.replace(/\s+/g, ' ').trim()
+  return line.length > 24 ? `${line.slice(0, 24)}…` : line
+}/** 保留最近打开的详情；当前会话、生成中及尚未成功保存的会话不淘汰。 */
 const SESSION_CACHE_LIMIT = 5
 /** 安全审核固定开启，所有请求都走扩展模式 */
 const SAFETY_CHECK = { level: 'high' } as const
@@ -45,12 +51,21 @@ const FILE_RETRY_LIMIT = 2
 /** 退避基数，第 n 次重试等待 2^n 倍；连续失败达到上限就放弃，把原始报错展示出来 */
 const FILE_RETRY_BASE_DELAY = 1000
 
-/** 阅读链接始终开启，智能搜索开关控制是否另行声明搜索工具（含边想边搜）。 */
-const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
+/**
+ * 服务端工具只在支持 DeepSeek 扩展且开了对应能力的厂商下声明；
+ * 阅读链接对 DeepSeek 始终开启，智能搜索开关控制是否另行声明搜索工具（含边想边搜）。
+ */
+const serverTools = (
+  provider: Provider,
+  search: boolean
+): CreateMessageRequest['tools'] => {
+  if (!provider.features.extensions) {
+    return []
+  }
   const tools: CreateMessageRequest['tools'] = [
     { type: 'deepseek_read_url', name: 'deepseek_read_url' },
   ]
-  if (search) {
+  if (search && supportsFeature(provider, 'webSearch')) {
     tools.push({ type: 'deepseek_web_search', name: 'deepseek_web_search' })
   }
   return tools
@@ -260,7 +275,7 @@ const createReply = (): AssistantMessage => {
     id: createId(),
     role: 'assistant',
     createdAt: Date.now(),
-    model: MODEL,
+    model: getActiveProvider()?.model ?? '',
     thinking,
     search,
     prefix: true,
@@ -708,8 +723,8 @@ export const continueReply = (sessionId: string, messageId: string) => {
   const { thinking, search } = useSettings.getState()
   const reply: AssistantMessage = {
     ...previous,
-    // 未记录请求配置的回复，续写时使用默认模型和当前开关。
-    model: previous.model ?? MODEL,
+    // 未记录请求配置的回复，续写时使用当前厂商的模型和开关。
+    model: previous.model || (getActiveProvider()?.model ?? ''),
     thinking: previous.thinking ?? thinking,
     search: previous.search ?? search,
     status: 'pending',
@@ -776,7 +791,7 @@ const saveServerIds = (sessionId: string, serverIds: Map<string, string>) => {
  * 附件的服务端 id：已有直接用；正在上传的等待同一任务；否则读取本地原件补传。
  * 本地也没有原件（导入的文档附件只有元数据）时返回 null，该附件只展示、不进入请求。
  */
-const ensureServerId = async (apiKey: string, file: FileAttachment): Promise<string | null> => {
+const ensureServerId = async (provider: Provider, file: FileAttachment): Promise<string | null> => {
   if (file.serverId) {
     return file.serverId
   }
@@ -788,7 +803,7 @@ const ensureServerId = async (apiKey: string, file: FileAttachment): Promise<str
   if (!blob) {
     return null
   }
-  return uploadAttachment(apiKey, file.id, blob, file.name, file.isImage)
+  return uploadAttachment(provider, file.id, blob, file.name, file.isImage)
 }
 
 /** 用会话里的最新消息替换请求快照：重传前会重置附件的 serverId，快照必须跟着更新 */
@@ -818,7 +833,11 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   // 服务端判定 file_id 失效时会清掉会话里的 serverId，先用最新消息替换请求快照，
   // 否则快照里仍是旧 id，补传会直接复用它。
   request = refreshRequest(sessionId, request)
-  const apiKey = useSettings.getState().apiKey ?? ''
+  const provider = getActiveProvider()
+  // 没有 Files API 的厂商（OpenAI 兼容接口等）不需要补传：附件不会进入请求，直接跳过
+  if (!provider || !supportsFeature(provider, 'attachments')) {
+    return { history: request.history, question: request.question, prefix: request.prefix }
+  }
   const serverIds = new Map<string, string>()
   // 停止生成立即生效；上传本身不取消（输入框与其他消息可能共用同一任务），完成后照常写回 serverId
   const aborted = new Promise<never>((_, reject) => {
@@ -826,7 +845,7 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   })
   const uploads = Promise.allSettled(
     request.question.files.map(async (file) => {
-      const serverId = await ensureServerId(apiKey, file)
+      const serverId = await ensureServerId(provider, file)
       if (serverId) {
         serverIds.set(file.id, serverId)
       }
@@ -854,7 +873,7 @@ const prepareFiles = async (sessionId: string, request: Request, signal: AbortSi
   for (const file of pending.values()) {
     signal.throwIfAborted()
     try {
-      const serverId = await Promise.race([ensureServerId(apiKey, file), aborted])
+      const serverId = await Promise.race([ensureServerId(provider, file), aborted])
       if (serverId) {
         serverIds.set(file.id, serverId)
         saveServerIds(sessionId, new Map([[file.id, serverId]]))
@@ -960,6 +979,20 @@ const waitForRetry = (attempt: number, signal: AbortSignal) =>
  * 服务端判定 file_id 失效时重新补传后重发，退避重试且次数有上限，超过则按原始报错收尾。
  */
 const streamReply = async (sessionId: string, initial: AssistantMessage, request: Request) => {
+  const provider = getActiveProvider()
+  if (!provider) {
+    // 厂商配置被删空的极端情况：不发起请求，直接提示去设置里配置
+    updateReply(
+      sessionId,
+      settleReply(initial, 'error', Date.now(), {
+        kind: 'http',
+        message: '',
+        localMessage: { key: 'providerNotConfigured' },
+      })
+    )
+    persist(sessionId)
+    return
+  }
   const controller = new AbortController()
   if (!getSession(sessionId)?.title) {
     titleRequests.add(controller)
@@ -996,15 +1029,15 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           initial.thinking ?? false,
           latestReminder
         )
-        const events = streamMessage(
-          useSettings.getState().apiKey ?? '',
+        const events = streamChat(
+          provider,
           {
-            model: initial.model ?? MODEL,
-            system: SYSTEM_PROMPT,
+            model: initial.model || provider.model,
+            system: provider.features.extensions ? SYSTEM_PROMPT : GENERIC_SYSTEM_PROMPT,
             messages,
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
             safety_check: SAFETY_CHECK,
-            tools: serverTools(initial.search ?? false),
+            tools: serverTools(provider, initial.search ?? false),
             ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
           },
           controller.signal
@@ -1032,6 +1065,18 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
         }
         reply = settleReply(reply, 'done', Date.now())
+        // 没有服务端自动标题的厂商：用本轮提问生成一个本地标题
+        if (
+          titleRequests.has(controller) &&
+          !provider.features.extensions &&
+          !get().importingHistory
+        ) {
+          const title = deriveTitle(request.question.content)
+          if (title) {
+            updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))
+          }
+          titleRequests.delete(controller)
+        }
         break
       } catch (error) {
         if (controller.signal.aborted) {

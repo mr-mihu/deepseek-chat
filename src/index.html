@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#ffffff" />
+    <!--
+      可选的运行时配置（由容器入口脚本写入）：代理地址与预置厂商。
+      直接部署静态文件时这个文件不存在，脚本会被忽略，应用照常使用默认设置。
+    -->
+    <script src="./config.js" onerror="this.remove()"></script>
     <title>API 使用 demo</title>
   </head>
   <body>

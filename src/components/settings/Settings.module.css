@@ -440,3 +440,247 @@
     max-width: 100%;
   }
 }
+
+/* ---------- 模型服务（自定义厂商） ---------- */
+
+.providerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 16px;
+}
+
+.providerHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.providerHeader .text {
+  padding-right: 0;
+}
+
+.providerList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.providerItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  transition: background-color var(--ds-transition-duration) var(--ds-ease-in-out);
+}
+
+.providerItemActive {
+  border-color: var(--dsw-alias-brand-primary);
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+.providerRadio {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+  background-color: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.providerRadio:focus-visible {
+  box-shadow: 0 0 0 2px var(--dsw-alias-button-primary-fill);
+}
+
+.providerRadioActive {
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.providerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: transparent;
+}
+
+.providerRadioActive .providerDot {
+  background-color: var(--dsw-alias-brand-primary);
+}
+
+.providerInfo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.providerNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.providerName {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.providerBadge {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 6px;
+  background-color: var(--dsw-specific-selector);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.providerMeta {
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.providerDialog {
+  width: 560px;
+  max-height: calc(100vh - 64px);
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.input,
+.textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--dsw-alias-label-caption);
+}
+
+.textarea {
+  min-height: 56px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.featureGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--dsw-alias-brand-primary);
+}
+
+.advanced summary {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.advancedBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.editorActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.testResult {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.testOk {
+  color: var(--dsw-alias-brand-text);
+}
+
+@media not all and (min-width: 768px) {
+  .providerDialog {
+    align-self: flex-end;
+    width: 100%;
+    max-width: none;
+    max-height: calc(100% - 32px);
+    border-radius: 24px 24px 0 0;
+  }
+
+  .providerItem {
+    padding: 12px;
+  }
+
+  .editorActions > button {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+}

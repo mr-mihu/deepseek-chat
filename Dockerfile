@@ -1,5 +1,8 @@
 # ---------- 构建静态站点 ----------
-FROM node:22-alpine AS build
+# 用 slim（glibc）而不是 alpine：部分老内核（如 CentOS 7 的 3.10）上
+# Node 22 + musl 下跑 pnpm 会在安装末尾报 EPERM，换成 Debian 基础镜像即可。
+# 这一阶段只用于构建，不影响最终镜像体积。
+FROM node:22-slim AS build
 WORKDIR /app
 # 装依赖用的 npm 源，国内服务器可改成 https://registry.npmmirror.com
 ARG NPM_REGISTRY=https://registry.npmjs.org

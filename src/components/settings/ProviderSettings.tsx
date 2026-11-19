@@ -304,6 +304,7 @@ const ProviderEditor = ({
       title={t(initial.name || initial.model ? 'providerEdit' : 'providerAdd')}
       closable
       className={styles.providerDialog}
+      mainClassName={styles.editorMain}
       onClose={onClose}
       footer={
         <div className={styles.editorActions}>

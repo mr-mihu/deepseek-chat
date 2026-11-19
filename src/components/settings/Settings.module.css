@@ -562,6 +562,13 @@
   max-height: calc(100vh - 64px);
 }
 
+/* 弹窗内容区：展开「高级选项」后超出高度时内部滚动，而不是溢出到框外 */
+.editorMain {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .editor {
   display: flex;
   flex-direction: column;

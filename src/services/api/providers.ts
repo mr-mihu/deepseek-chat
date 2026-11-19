@@ -292,6 +292,10 @@ export type RuntimeConfig = {
   proxyToken?: string
   /** 首次打开时预置的厂商 */
   providers?: unknown[]
+  /** 左上角标题，空则用内置文案 */
+  appName?: string
+  /** 左上角标题旁的 logo 图片地址，可以是同源相对路径 */
+  logoUrl?: string
 }
 
 let runtimeCache: RuntimeConfig | null = null
@@ -306,6 +310,8 @@ const normalizeRuntimeConfig = (value: unknown): RuntimeConfig => {
     proxyUrl: asString(record.proxyUrl).trim() || undefined,
     proxyToken: asString(record.proxyToken).trim() || undefined,
     providers: Array.isArray(record.providers) ? record.providers : undefined,
+    appName: asString(record.appName).trim() || undefined,
+    logoUrl: asString(record.logoUrl).trim() || undefined,
   }
 }
 

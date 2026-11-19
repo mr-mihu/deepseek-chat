@@ -25,6 +25,9 @@ services:
       CHAT_PROXY_TOKEN: ${CHAT_PROXY_TOKEN:-}
       # 可选：预置厂商列表（JSON 数组），首次打开时出现在设置里
       CHAT_PROVIDERS: ${CHAT_PROVIDERS:-[]}
+      # 可选：左上角标题与 logo（logo 可以是 /logo.png 这样的同源路径）
+      CHAT_APP_NAME: ${CHAT_APP_NAME:-}
+      CHAT_APP_LOGO: ${CHAT_APP_LOGO:-}
     depends_on:
       - api
     restart: unless-stopped

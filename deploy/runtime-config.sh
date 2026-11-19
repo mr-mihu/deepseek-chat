@@ -8,6 +8,8 @@ CONFIG_FILE=/usr/share/nginx/html/config.js
 PROXY_URL="${CHAT_PROXY_URL:-}"
 PROXY_TOKEN="${CHAT_PROXY_TOKEN:-}"
 PROVIDERS="${CHAT_PROVIDERS:-[]}"
+APP_NAME="${CHAT_APP_NAME:-}"
+APP_LOGO="${CHAT_APP_LOGO:-}"
 
 # 只接受 JSON 数组，写错的配置退化成空数组，避免页面直接报语法错误
 case "$PROVIDERS" in
@@ -19,8 +21,10 @@ cat > "$CONFIG_FILE" <<EOF
 window.__CHAT_DEMO_CONFIG__ = {
   "proxyUrl": "${PROXY_URL}",
   "proxyToken": "${PROXY_TOKEN}",
-  "providers": ${PROVIDERS}
+  "providers": ${PROVIDERS},
+  "appName": "${APP_NAME}",
+  "logoUrl": "${APP_LOGO}"
 };
 EOF
 
-echo "[runtime-config] wrote $CONFIG_FILE (proxyUrl='${PROXY_URL}', providers=${PROVIDERS})"
+echo "[runtime-config] wrote $CONFIG_FILE (proxyUrl='${PROXY_URL}', appName='${APP_NAME}', logo='${APP_LOGO}')"

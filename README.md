@@ -30,6 +30,8 @@ Copy `.env.example` to `.env`, adjust, then `docker compose up -d` (no rebuild n
 | `CHAT_PROXY_TOKEN`    | empty         | Shared secret for the proxy; recommended on public hosts                                      |
 | `PROXY_ALLOWED_HOSTS` | empty (any)   | Only forward to these hosts, comma separated, e.g. `api.openai.com,api.siliconflow.cn`        |
 | `CHAT_PROVIDERS`      | `[]`          | Providers to seed as a JSON array; users can still add their own                               |
+| `CHAT_APP_NAME`       | empty         | Title in the top-left corner; the built-in "API usage demo" is used when empty                 |
+| `CHAT_APP_LOGO`       | empty         | Logo shown next to the title; a same-origin path such as `/logo.png` or a full URL             |
 
 Seeded provider example:
 
@@ -46,6 +48,27 @@ Seeded provider example:
 ```
 
 > Keys live in each visitor's browser localStorage. Keys seeded with `CHAT_PROVIDERS` are shipped to the browser in `config.js`, so use that only for personal or internal deployments.
+
+### Custom title and logo
+
+The top-left title and logo come from the generated `config.js`, so editing `.env` and running `docker compose up -d` is enough — no image rebuild:
+
+```sh
+CHAT_APP_NAME=Acme AI Assistant
+CHAT_APP_LOGO=/logo.png
+```
+
+The image file itself must be reachable by the browser. Mount it into nginx's static root with an override file instead of rebuilding:
+
+```yaml
+# docker-compose.override.yml
+services:
+  web:
+    volumes:
+      - ./logo.png:/usr/share/nginx/html/logo.png:ro
+```
+
+`CHAT_APP_LOGO` also accepts a full URL (for example an asset served from your portal). Leave both empty to keep the built-in title and no logo; the browser tab title and favicon follow the same setting.
 
 ### Why the forwarding proxy
 

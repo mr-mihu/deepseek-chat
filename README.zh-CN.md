@@ -30,6 +30,8 @@ docker compose up -d --build
 | `CHAT_PROXY_TOKEN`    | 空            | 转发代理的校验令牌，公网部署建议设置                                                    |
 | `PROXY_ALLOWED_HOSTS` | 空（不限制）  | 只允许转发到这些域名，逗号分隔，如 `api.openai.com,api.siliconflow.cn`                  |
 | `CHAT_PROVIDERS`      | `[]`          | 预置厂商（JSON 数组），首次打开时出现在设置里；也可以在页面里手动添加                     |
+| `CHAT_APP_NAME`       | 空            | 左上角标题，留空用内置的「API 使用 demo」                                               |
+| `CHAT_APP_LOGO`       | 空            | 左上角 logo 图片地址，可以是同源路径（如 `/logo.png`）或完整 URL                        |
 
 预置厂商示例：
 
@@ -46,6 +48,27 @@ docker compose up -d --build
 ```
 
 > 密钥只保存在访问者自己的浏览器 localStorage 里。用 `CHAT_PROVIDERS` 预置的密钥会随 `config.js` 下发给浏览器，只适合个人或内网部署。
+
+### 自定义标题和 Logo
+
+左上角标题和 logo 由构建产物里的 `config.js` 控制，改 `.env` 后 `docker compose up -d` 重启即可，**不用重新构建镜像**：
+
+```sh
+CHAT_APP_NAME=唐讯 AI 助手
+CHAT_APP_LOGO=/logo.png
+```
+
+logo 图片本身要能被浏览器访问。不想改镜像的话，用一份 `docker-compose.override.yml` 把它挂进 nginx 的静态目录：
+
+```yaml
+# docker-compose.override.yml
+services:
+  web:
+    volumes:
+      - ./logo.png:/usr/share/nginx/html/logo.png:ro
+```
+
+`CHAT_APP_LOGO` 也可以直接填完整 URL（例如放到自己的图床或门户上）。留空就只显示内置标题、不显示 logo；浏览器标签页标题和 favicon 也会跟着换。
 
 ### 为什么要有转发代理
 

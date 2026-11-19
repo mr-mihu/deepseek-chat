@@ -51,6 +51,33 @@ Seeded provider example:
 
 Browsers hit CORS when calling third-party APIs directly, and most model services do not allow it. The `api` service accepts `GET|POST /api/proxy?target=<url>`, forwards the request and streams the response back chunk by chunk (nginx buffering is off, so token-by-token output is unaffected). If a provider allows CORS, set `CHAT_PROXY_URL` to empty and skip the proxy.
 
+### Deploying to a server
+
+The server needs **no Node or pnpm**; dependencies and the build run inside the container. Docker with Compose v2 is enough.
+
+```sh
+git clone https://github.com/<your-account>/deepseek-chat.git
+cd deepseek-chat
+cp .env.example .env         # adjust port, proxy, seeded providers
+docker compose up -d --build
+```
+
+- The first build pulls `node:22-alpine` and `nginx:1.27-alpine` and installs dependencies from npm, so it needs internet. Behind a slow link, configure a Docker registry mirror and set `NPM_REGISTRY=https://registry.npmmirror.com` in `.env`.
+- Update with `git pull && docker compose up -d --build`; incremental builds hit the layer cache and usually finish in well under a minute.
+- Status and logs: `docker compose ps`, `docker compose logs -f web api`. Stop with `docker compose down`.
+- Offline/intranet servers: build where you have network, then ship the images:
+
+```sh
+docker compose build
+docker save chat-demo-web:latest chat-demo-proxy:latest | gzip > chat-demo-images.tar.gz
+# on the server
+gunzip -c chat-demo-images.tar.gz | docker load
+docker compose up -d
+```
+
+- Put an HTTPS reverse proxy (Nginx / Caddy) in front of `127.0.0.1:8080`; the `api` container exposes no host port, only `web` talks to it.
+- Conversations and provider settings live in the visitor's browser (localStorage / IndexedDB), so the server is stateless and containers can be recreated at will — but changing host or port changes the origin and the browser will not see the old data.
+
 ## Getting started locally
 
 Install Node.js 22.12+ and pnpm:

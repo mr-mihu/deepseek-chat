@@ -13,6 +13,9 @@ services:
     build:
       context: .
       target: web
+      args:
+        # 构建时的 npm 源，国内服务器可设为 https://registry.npmmirror.com
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
     image: chat-demo-web:latest
     ports:
       - '${WEB_PORT:-8080}:80'

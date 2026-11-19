@@ -51,6 +51,33 @@ docker compose up -d --build
 
 浏览器直接请求第三方接口时会被 CORS 拦住，而多数模型服务不允许跨域。Compose 里的 `api` 服务接收 `GET|POST /api/proxy?target=<目标地址>`，原样转发请求并把流式响应逐块吐回浏览器（nginx 侧关闭了缓冲，逐字输出不受影响）。如果厂商本身允许跨域，把 `CHAT_PROXY_URL` 设为空即可不用代理。
 
+### 部署到服务器
+
+服务器上**不需要装 Node 或 pnpm**：依赖安装与构建都在容器里完成，只要 Docker 与 Compose v2。
+
+```sh
+git clone https://github.com/<你的账号>/deepseek-chat.git
+cd deepseek-chat
+cp .env.example .env         # 按需改端口、代理、预置厂商
+docker compose up -d --build
+```
+
+- 首次构建要拉 `node:22-alpine` 与 `nginx:1.27-alpine`，并从 npm 源装依赖，需要外网。国内建议给 Docker 配镜像加速，并在 `.env` 里设 `NPM_REGISTRY=https://registry.npmmirror.com`。
+- 更新版本：`git pull && docker compose up -d --build`；改动不大时会命中构建缓存，通常几十秒。
+- 状态与日志：`docker compose ps`、`docker compose logs -f web api`；停止：`docker compose down`。
+- 内网/离线服务器：在能联网的机器上构建好后导出镜像再导入：
+
+```sh
+docker compose build
+docker save chat-demo-web:latest chat-demo-proxy:latest | gzip > chat-demo-images.tar.gz
+# 拷到服务器
+gunzip -c chat-demo-images.tar.gz | docker load
+docker compose up -d
+```
+
+- 对外建议在前面挂一层 HTTPS 反向代理（Nginx / Caddy 反代到 `127.0.0.1:8080`）；`api` 容器不向宿主机暴露端口，只由 `web` 内部转发。
+- 会话与厂商配置都存在访问者浏览器里（localStorage / IndexedDB），服务器端无状态，容器随时可以重建；但也意味着换域名或端口后浏览器的旧数据对不上（origin 变了）。
+
 ## 本地运行
 
 准备 Node.js 22.12+ 和 pnpm：

@@ -291,9 +291,15 @@ export const resetRuntimeConfig = () => {
   runtimeCache = null
 }
 
+const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:|\/|$)/i
+
+const isLoopbackUrl = (url: string) => LOOPBACK.test(url.replace(/^https?:\/\//i, ''))
+
 const withProxy = (url: string): string => {
   const { proxyUrl } = runtimeConfig()
-  if (!proxyUrl) {
+  // 目标是浏览器所在的这台机器时不要走服务器代理：
+  // 容器里的 127.0.0.1 指的是容器自己，不是用户的机器。
+  if (!proxyUrl || isLoopbackUrl(url)) {
     return url
   }
   // proxyUrl 可能带查询串，如 /api/proxy?x=1

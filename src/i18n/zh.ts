@@ -220,4 +220,8 @@ export const zh = {
   providerExtraBodyInvalid: '额外请求体必须是合法的 JSON 对象',
   providerNotConfigured: '还没有可用的模型厂商，请先在「设置 → 模型服务」里配置',
   attachmentsUnsupported: '当前模型厂商不支持附件上传',
+  newApiImported: '已导入 New API 配置',
+  newApiImportedNoModel: '已导入 New API 配置，请在设置里确认模型和密钥',
+  newApiImportFailed: '导入 New API 配置失败：{message}',
+  newApiAddressInvalid: 'New API 地址格式不正确，请填写 http(s) 地址',
 } as const

@@ -231,4 +231,9 @@ export const en = {
   providerExtraBodyInvalid: 'Extra request body must be a valid JSON object',
   providerNotConfigured: 'No usable provider yet. Add one in Settings → Model services',
   attachmentsUnsupported: 'This provider does not support file attachments',
+  newApiImported: 'Imported the New API configuration',
+  newApiImportedNoModel:
+    'Imported the New API configuration. Check the model and API key in Settings.',
+  newApiImportFailed: 'Could not import the New API configuration: {message}',
+  newApiAddressInvalid: 'Invalid New API address; use an http(s) URL',
 } satisfies Record<keyof typeof zh, string>

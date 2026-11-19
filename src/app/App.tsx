@@ -19,6 +19,7 @@ import { SettingsDialog } from '../components/settings/SettingsDialog.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
 import { onUploadNotice } from '../services/attachments.js'
+import { applyNewApiImport } from '../services/newapiImport.js'
 import { Button } from '../components/base/Button.js'
 import { stopReadAloud } from '../services/speech/readAloud.js'
 import { CollapsedSider } from '../components/sider/CollapsedSider.js'
@@ -69,8 +70,14 @@ export const App = () => {
 
   useEffect(() => {
     void initChat()
-    // 首次打开先在设置里配置模型厂商
-    ensureProvider()
+    // new-api 聊天预设一键导入（?newapi=…&key=…）：先落配置，再判断是否需要打开设置
+    void (async () => {
+      const notice = await applyNewApiImport()
+      if (notice) {
+        showToast(notice)
+      }
+      ensureProvider()
+    })()
   }, [])
 
   return (

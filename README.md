@@ -98,6 +98,27 @@ Under **Advanced** you can add:
 
 With the OpenAI-compatible protocol the "deep thinking" toggle sends no extra field; use the extra request body for vendor-specific switches.
 
+## New API one-click import
+
+[New API](https://github.com/QuantumNous/new-api) is only an OAuth *client* today: it has no OAuth/OIDC authorization server (no `/authorize`, no discovery — see [issue #6572](https://github.com/QuantumNous/new-api/issues/6572)), so "jump there, authorize, come back with a token" is not possible. What it does offer is chat presets: a root user configures a link template with placeholders, and users click it to land in the target app with their own key.
+
+chat-demo understands that link. The parameters are `newapi` (the New API server address) and `key` (the API key):
+
+```json
+{ "chat-demo": "http://your-chat-demo:8080/?newapi={address}&key={key}" }
+```
+
+Add that line under New API's `System settings → Console content → Chat` (root only). Users can then come from the "Chat" section in the sidebar or from `⋯ → Chat → chat-demo` on an API key row.
+
+What happens on open:
+
+- A provider named "New API" is created and activated, with the base URL taken from `{address}/v1` (an existing config for the same address is updated in place instead of duplicated).
+- The key is used to call `/v1/models` and the first model becomes the default.
+- If the model list cannot be fetched (bad key, unreachable address) the config is still saved and Settings → Model services opens so the user can confirm.
+- The URL parameters are stripped immediately; the key has already been visible in the address bar and browser history, which is fine for private/internal use but not for shared machines.
+
+Loopback addresses (`localhost`, `127.0.0.1`) bypass the Docker forwarding proxy — `127.0.0.1` inside the container is not the user's machine.
+
 ## Features
 
 - Multiple conversations with automatic titles, renaming, and deletion; edit prompts, regenerate replies, and switch between message branches.

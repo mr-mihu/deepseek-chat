@@ -78,7 +78,10 @@ export const importNewApiProvider = async (
   let model = provider.model
   try {
     const models = await fetchNewApiModels(provider, signal)
-    model = models[0] ?? model
+    if (models.length > 0) {
+      // 已有模型仍在列表里就保留用户的选择，避免每次点开都被重置成列表第一个
+      model = models.includes(provider.model) ? provider.model : provider.model || models[0]
+    }
   } catch {
     // 拿不到模型列表时保留原模型（可能为空），让用户在设置里确认
   }

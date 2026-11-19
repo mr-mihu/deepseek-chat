@@ -224,4 +224,11 @@ export const zh = {
   newApiImportedNoModel: '已导入 New API 配置，请在设置里确认模型和密钥',
   newApiImportFailed: '导入 New API 配置失败：{message}',
   newApiAddressInvalid: 'New API 地址格式不正确，请填写 http(s) 地址',
+  providerVoiceTitle: '语音（OpenAI 兼容）',
+  providerTtsModel: '朗读模型',
+  providerTtsModelHint: '如 tts-1；留空则回复上没有朗读按钮。',
+  providerTtsVoiceName: '朗读音色',
+  providerTtsVoiceNameHint: '如 alloy；留空使用 alloy。',
+  providerSttModel: '语音识别模型',
+  providerSttModelHint: '如 whisper-1；留空则没有语音输入按钮。',
 } as const

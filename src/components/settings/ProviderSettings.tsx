@@ -17,6 +17,7 @@ import {
   type Provider,
   type ProviderFeatures,
   type ProviderProtocol,
+  type ProviderVoice,
 } from '../../services/api/providers.js'
 import {
   removeProvider,
@@ -189,6 +190,22 @@ const ProviderEditor = ({
         ...(key === 'extensions' && !value ? { webSearch: false } : {}),
       },
     }))
+    setTestResult(null)
+  }
+
+  /** OpenAI 兼容语音：三项都留空时不保存该配置，语音按钮就不会出现 */
+  const patchVoice = (key: keyof ProviderVoice, value: string) => {
+    setDraft((current) => {
+      const voice: ProviderVoice = {
+        ttsModel: '',
+        ttsVoice: '',
+        sttModel: '',
+        ...current.voice,
+        [key]: value,
+      }
+      const empty = !voice.ttsModel.trim() && !voice.ttsVoice.trim() && !voice.sttModel.trim()
+      return { ...current, voice: empty ? undefined : voice }
+    })
     setTestResult(null)
   }
 
@@ -451,7 +468,41 @@ const ProviderEditor = ({
               </Field>
             ) : null}
           </div>
-        ) : null}
+        ) : (
+          <div className={styles.featureGroup}>
+            <span className={styles.fieldLabel}>{t('providerVoiceTitle')}</span>
+            <Field label={t('providerTtsModel')} hint={t('providerTtsModelHint')}>
+              <input
+                className={styles.input}
+                value={draft.voice?.ttsModel ?? ''}
+                placeholder="tts-1"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => patchVoice('ttsModel', event.target.value)}
+              />
+            </Field>
+            <Field label={t('providerTtsVoiceName')} hint={t('providerTtsVoiceNameHint')}>
+              <input
+                className={styles.input}
+                value={draft.voice?.ttsVoice ?? ''}
+                placeholder="alloy"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => patchVoice('ttsVoice', event.target.value)}
+              />
+            </Field>
+            <Field label={t('providerSttModel')} hint={t('providerSttModelHint')}>
+              <input
+                className={styles.input}
+                value={draft.voice?.sttModel ?? ''}
+                placeholder="whisper-1"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => patchVoice('sttModel', event.target.value)}
+              />
+            </Field>
+          </div>
+        )}
         <details className={styles.advanced}>
           <summary>{t('providerAdvanced')}</summary>
           <div className={styles.advancedBody}>

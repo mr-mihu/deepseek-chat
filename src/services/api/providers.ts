@@ -25,6 +25,15 @@ export type ProviderFeatures = {
   voice: boolean
 }
 
+export type ProviderVoice = {
+  /** 朗读（TTS）模型，如 tts-1；留空表示这个厂商不支持朗读 */
+  ttsModel: string
+  /** 朗读音色，如 alloy */
+  ttsVoice: string
+  /** 语音输入（STT）模型，如 whisper-1；留空表示不支持语音输入 */
+  sttModel: string
+}
+
 export type Provider = {
   id: string
   /** 展示名，如「硅基流动」 */
@@ -37,6 +46,8 @@ export type Provider = {
   features: ProviderFeatures
   /** 语音接口地址（DeepSeek 为 {origin}/v1/tools），为空表示不支持语音 */
   toolsBaseUrl?: string
+  /** OpenAI 兼容协议的语音配置（/audio/speech 与 /audio/transcriptions） */
+  voice?: ProviderVoice
   /** 合并进请求体的额外字段，如 reasoning_effort、temperature */
   extraBody?: Record<string, unknown>
   /** 额外请求头 */
@@ -198,6 +209,23 @@ const normalizeFeatures = (
     : EMPTY_FEATURES
 }
 
+/** OpenAI 兼容的语音配置；三项都为空时视为不支持语音 */
+const normalizeVoice = (value: unknown, protocol: ProviderProtocol): ProviderVoice | undefined => {
+  if (protocol !== 'openai') {
+    return undefined
+  }
+  const record = asRecord(value)
+  if (!record) {
+    return undefined
+  }
+  const voice: ProviderVoice = {
+    ttsModel: asString(record.ttsModel).trim(),
+    ttsVoice: asString(record.ttsVoice).trim(),
+    sttModel: asString(record.sttModel).trim(),
+  }
+  return voice.ttsModel || voice.ttsVoice || voice.sttModel ? voice : undefined
+}
+
 /** 把任意来源（localStorage、config.js、用户输入）的数据收敛成合法的厂商配置 */
 export const normalizeProvider = (value: unknown): Provider | null => {
   const record = asRecord(value)
@@ -211,6 +239,7 @@ export const normalizeProvider = (value: unknown): Provider | null => {
   }
   const features = normalizeFeatures(record.features, protocol)
   const toolsBaseUrl = normalizeBaseUrl(asString(record.toolsBaseUrl))
+  const voice = normalizeVoice(record.voice, protocol)
   return {
     id: asString(record.id).trim() || createId(),
     name: asString(record.name).trim() || hostOf(baseUrl),
@@ -220,6 +249,7 @@ export const normalizeProvider = (value: unknown): Provider | null => {
     apiKey: asString(record.apiKey),
     features,
     ...(features.voice && toolsBaseUrl ? { toolsBaseUrl } : {}),
+    ...(voice ? { voice } : {}),
     ...(asRecord(record.extraBody) ? { extraBody: record.extraBody as Record<string, unknown> } : {}),
     ...(asStringRecord(record.headers) ? { headers: asStringRecord(record.headers) } : {}),
   }
@@ -248,6 +278,7 @@ export const createProvider = (preset?: ProviderPreset, seed?: Partial<Provider>
     ...(seed?.toolsBaseUrl ?? preset?.toolsBaseUrl
       ? { toolsBaseUrl: seed?.toolsBaseUrl ?? preset?.toolsBaseUrl }
       : {}),
+    ...(seed?.voice ? { voice: seed.voice } : {}),
     ...(seed?.extraBody ? { extraBody: seed.extraBody } : {}),
     ...(seed?.headers ? { headers: seed.headers } : {}),
   }
@@ -334,21 +365,49 @@ export const providerHeaders = (
   }
 }
 
-/** 该厂商是否支持某项 DeepSeek 扩展能力 */
+/** 该厂商是否支持某项扩展能力 */
 export const supportsFeature = (
   provider: Provider | null | undefined,
   feature: keyof ProviderFeatures
 ): boolean => {
-  if (!provider || provider.protocol !== 'anthropic' || !provider.features[feature]) {
+  if (!provider) {
+    return false
+  }
+  if (feature === 'voice') {
+    return supportsReadAloud(provider) || supportsVoiceInput(provider)
+  }
+  if (provider.protocol !== 'anthropic' || !provider.features[feature]) {
     return false
   }
   if (feature === 'webSearch') {
     return provider.features.extensions
   }
-  if (feature === 'voice') {
-    return !!provider.toolsBaseUrl
-  }
   return true
+}
+
+/**
+ * 朗读（TTS）：DeepSeek 兼容接口用 /v1/tools/tts，OpenAI 兼容接口用 /audio/speech，
+ * 后者需要在厂商配置里填 TTS 模型才启用。
+ */
+export const supportsReadAloud = (provider: Provider | null | undefined): boolean => {
+  if (!provider) {
+    return false
+  }
+  if (provider.protocol === 'openai') {
+    return !!provider.voice?.ttsModel
+  }
+  return provider.features.voice && !!provider.toolsBaseUrl
+}
+
+/** 语音输入（STT）：DeepSeek 兼容接口用 /v1/tools/asr，OpenAI 兼容接口用 /audio/transcriptions */
+export const supportsVoiceInput = (provider: Provider | null | undefined): boolean => {
+  if (!provider) {
+    return false
+  }
+  if (provider.protocol === 'openai') {
+    return !!provider.voice?.sttModel
+  }
+  return provider.features.voice && !!provider.toolsBaseUrl
 }
 
 const isLocalHost = (baseUrl: string) =>

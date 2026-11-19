@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TranslationMessage } from '../../i18n/index.js'
-import { supportsFeature } from '../../services/api/providers.js'
+import { supportsVoiceInput } from '../../services/api/providers.js'
 import { transcribe } from '../../services/api/speech.js'
 import { startRecording, type Recording } from '../../services/speech/recorder.js'
 import { getActiveProvider, useActiveProvider } from '../../services/settings.js'
@@ -32,8 +32,8 @@ const describeRecordingError = (error: unknown): TranslationMessage => {
  */
 export const useVoiceInput = (onText: (text: string) => void) => {
   const provider = useActiveProvider()
-  // 语音接口是 DeepSeek 扩展：当前厂商不支持时直接禁用入口
-  const available = AVAILABLE && supportsFeature(provider, 'voice')
+  // 语音接口按厂商配置启用：DeepSeek 扩展或 OpenAI 兼容的 /audio/transcriptions
+  const available = AVAILABLE && supportsVoiceInput(provider)
   const [status, setStatus] = useState<VoiceInputStatus>('idle')
   /** 本次录音已录秒数，只在录音中递增 */
   const [seconds, setSeconds] = useState(0)

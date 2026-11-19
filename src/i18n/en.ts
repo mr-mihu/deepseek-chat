@@ -236,4 +236,11 @@ export const en = {
     'Imported the New API configuration. Check the model and API key in Settings.',
   newApiImportFailed: 'Could not import the New API configuration: {message}',
   newApiAddressInvalid: 'Invalid New API address; use an http(s) URL',
+  providerVoiceTitle: 'Voice (OpenAI compatible)',
+  providerTtsModel: 'TTS model',
+  providerTtsModelHint: 'e.g. tts-1. Leave empty to hide the read-aloud button.',
+  providerTtsVoiceName: 'TTS voice',
+  providerTtsVoiceNameHint: 'e.g. alloy. Defaults to alloy.',
+  providerSttModel: 'Speech-to-text model',
+  providerSttModelHint: 'e.g. whisper-1. Leave empty to hide voice input.',
 } satisfies Record<keyof typeof zh, string>

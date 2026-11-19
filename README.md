@@ -111,6 +111,8 @@ Under **Advanced** you can add:
 - **Extra headers** — one `Name: value` per line, e.g. OpenRouter's `HTTP-Referer`.
 - **Extra request body** — JSON merged into the request body, e.g. `{"temperature": 0.7}`, `{"reasoning_effort": "high"}`, `{"enable_thinking": true}`. This is how you adapt vendor-specific switches.
 
+OpenAI-compatible providers can also configure voice: set a **TTS model** (e.g. `tts-1`) and replies get a read-aloud button; set a **speech-to-text model** (e.g. `whisper-1`) and the composer gets voice input. Leave them empty to hide both. The TTS voice defaults to `alloy`. Gateways such as new-api / one-api work the same way as long as their upstream has TTS / STT channels.
+
 ### Capabilities by protocol
 
 | Capability                              | OpenAI compatible                       | Anthropic compatible                          |
@@ -120,7 +122,7 @@ Under **Advanced** you can add:
 | Auto title                              | Derived from the first prompt           | Server-side only with "DeepSeek-specific API" |
 | File attachments                        | No                                      | Requires "File attachments (Files API)"       |
 | Web search / link reading               | No                                      | Requires "DeepSeek-specific API" + "Web search" |
-| Voice input and read aloud              | No                                      | Requires voice enabled and a voice endpoint   |
+| Voice input and read aloud              | Available once you fill in TTS / STT models (`/audio/speech`, `/audio/transcriptions`) | Requires voice enabled and a voice endpoint   |
 | Continue generation (prefill)           | No (API has no prefix completion)       | Yes                                           |
 
 With the OpenAI-compatible protocol the "deep thinking" toggle sends no extra field; use the extra request body for vendor-specific switches.

@@ -8,7 +8,7 @@ import { continueReply, regenerateReply } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
 import { useActiveProvider } from '../../services/settings.js'
-import { supportsFeature } from '../../services/api/providers.js'
+import { supportsReadAloud } from '../../services/api/providers.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
@@ -51,7 +51,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   const notice = streaming ? null : describeReply(message)
   // 语音朗读与续写是 DeepSeek 扩展：其他厂商下隐藏这两个入口
   const provider = useActiveProvider()
-  const canReadAloud = supportsFeature(provider, 'voice')
+  const canReadAloud = supportsReadAloud(provider)
   // 安全拒绝：已下发的思考与正文按协议丢弃，只显示模板答复。
   const refused = message.stopReason === 'refusal'
   const answer = refused ? null : view.answer

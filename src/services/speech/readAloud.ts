@@ -105,8 +105,22 @@ export const toggleReadAloud = (
     let lastSource: AudioBufferSourceNode | null = null
     let rest = new Uint8Array(0)
     try {
-      const stream = await synthesize(provider, text, ttsVoice, controller.signal)
-      const reader = stream.getReader()
+      const audio = await synthesize(provider, text, ttsVoice, controller.signal)
+      // 压缩音频（mp3/wav 等）：整段解码后一次播放
+      if (audio.kind === 'encoded') {
+        const buffer = await context.decodeAudioData(audio.data)
+        if (controller.signal.aborted) {
+          return
+        }
+        const source = context.createBufferSource()
+        source.buffer = buffer
+        source.connect(context.destination)
+        source.onended = () => finish(controller)
+        source.start()
+        useReadAloud.setState({ status: 'playing' })
+        return
+      }
+      const reader = audio.stream.getReader()
       controller.signal.addEventListener('abort', () => void reader.cancel().catch(() => {}))
       for (;;) {
         const { done, value } = await reader.read()
